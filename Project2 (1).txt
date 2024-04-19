@@ -1,0 +1,131 @@
+pipeline {
+    agent none
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials("cb26ac19-f954-40ca-a12e-d790594bcca7")
+    }
+    stages {
+        stage('git') {
+            agent {
+                label "nodename"
+            }
+            steps {
+                script {
+                    git'https://github.com/Sameer-8080/website.git'
+                }
+            }
+        }
+        stage('docker') {
+            agent {
+                label "K8-Master"
+            }
+            steps {
+                script {
+                    sh 'sudo docker build /home/ubuntu/jenkins/workspace/test-pipeline/ -t intellipaatsai/proj2'
+                    sh 'sudo docker login -u ${DOCKERHUB_CREDENTIALS_USR} -p ${DOCKERHUB_CREDENTIALS_PSW}'
+                    sh 'sudo docker push intellipaatsai/proj2'
+                }
+            }
+        }
+        stage('kubernetes') {
+            agent {
+                label "K8-Master"
+            }
+            steps {
+                script {
+                   # sh 'kubectl delete deploy nginx-deployment'
+                    sh 'kubectl apply -f deployment.yaml'
+                   # sh 'kubectl delete service my-service'
+                    sh 'kubectl apply -f service.yaml'
+                }
+            }
+        }
+    }
+}
+
+
+ubuntu@ip-172-31-28-155:~$ cat play.yaml 
+---
+- name: running script on localhost
+  hosts: localhost
+  become: true
+  tasks:
+  - name: executing jenkins.sh
+    script: jenkins.sh
+- name: running script on K8s Master
+  hosts: KMaster
+  become: true
+  tasks:
+  - name: executing km.sh
+    script: km.sh
+- name: running script on K8s Slave
+  hosts: KSlaves
+  become: true
+  tasks:
+  - name: executing ks.sh
+    script: ks.sh
+ubuntu@ip-172-31-28-155:~$ cat jenkins.sh 
+sudo apt update
+sudo apt install openjdk-11-jdk -y
+curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins -y
+ubuntu@ip-172-31-28-155:~$ cat km.sh 
+sudo apt update
+sudo apt install openjdk-11-jdk -y
+sudo apt install docker.io -y
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y curl apt-transport-https ca-certificates software-properties-common
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo add-apt-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+sudo swapoff -a
+sudo apt update
+sudo apt install -y kubelet kubeadm kubectl
+ubuntu@ip-172-31-28-155:~$ cat ks.sh 
+sudo apt update
+sudo apt install docker.io -y
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y curl apt-transport-https ca-certificates software-properties-common
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo add-apt-repository "deb http://apt.kubernetes.io/ kubernetes-xenial main"
+sudo swapoff -a
+sudo apt update
+sudo apt install -y kubelet kubeadm kubectl
+ubuntu@ip-172-31-28-155:~$ cat main.tf 
+provider "aws" {
+  secret_key = "8vutJqYD0FXW9si7R5zq/f3vYAmXXkuoZOChOmVb"
+  access_key = "AKIARZYTZU2OETVSZ2C3"
+  region = "us-east-2"
+}
+
+resource "aws_instance" "K8-M" {
+  ami = "ami-0cd59ecaf368e5ccf"
+  instance_type = "t2.medium"
+  key_name = "jenkins"
+  tags = {
+    Name = "Machine3"
+  }
+}
+
+resource "aws_instance" "K8-S1" {
+  ami = "ami-0cd59ecaf368e5ccf"
+  instance_type = "t2.micro"
+  key_name = "jenkins"
+  tags = {
+    Name = "Machine2"
+  }
+}
+
+resource "aws_instance" "K8-S2" {
+  ami = "ami-0cd59ecaf368e5ccf"
+  instance_type = "t2.micro"
+  key_name = "jenkins"
+  tags = {
+    Name = "Machine4"
+  }
+}
