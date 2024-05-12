@@ -98,8 +98,8 @@ sudo apt update
 sudo apt install -y kubelet kubeadm kubectl
 ubuntu@ip-172-31-28-155:~$ cat main.tf 
 provider "aws" {
-  secret_key = "8vutJqYD0FXW9si7R5zq/f3vYAmXXkuoZOChOmVb"
-  access_key = "AKIARZYTZU2OETVSZ2C3"
+  secret_key = "8vutJq"
+  access_key = "AKIARZY"
   region = "us-east-2"
 }
 
